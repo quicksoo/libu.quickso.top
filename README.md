@@ -21,7 +21,7 @@
 
 ### 下载后本地使用
 
-项目构建后，发布目录中只有一个文件：[dist/index.html](./dist/index.html)。将该文件下载或复制到本地后，用现代浏览器直接打开即可使用，适合断网现场、内网环境或需要完全本地操作的场景。
+从 [Releases](https://github.com/quicksoo/libu.quickso.top/releases) 下载最新的 `libu.quickso.top.html`，用现代浏览器直接打开即可使用。发布包只有一个 HTML 文件，适合断网现场、内网环境或需要完全本地操作的场景。
 
 > 建议首次使用时选定一种方式并持续使用。线上站点和本地 HTML 的数据不会自动合并。
 
@@ -97,6 +97,19 @@ npm run build
 ```
 
 构建完成后，`dist/` 中仅保留 `index.html`，可直接部署到任意静态网站托管服务，或单独分发给用户本地打开。项目不需要数据库、应用服务器或 API 服务。
+
+### GitHub Release 发布
+
+仓库的 `.github/workflows/release.yml` 会在推送版本标签（例如 `v1.0.0`）时自动构建，并创建 GitHub Release，上传单文件资产 `libu.quickso.top.html`。
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+用户可从 [Releases](https://github.com/quicksoo/libu.quickso.top/releases) 下载对应版本；最新版本也可使用固定地址：
+
+<https://github.com/quicksoo/libu.quickso.top/releases/latest/download/libu.quickso.top.html>
 
 ## 技术说明
 
