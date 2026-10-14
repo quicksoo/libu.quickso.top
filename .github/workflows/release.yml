@@ -33,5 +33,36 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          generate_release_notes: false
+          name: 礼簿 ${{ github.ref_name }}
+          body: |
+            ## 礼簿本 ${{ github.ref_name }}
+
+            适用于婚礼、寿宴、升学宴、乔迁等场合的免安装电子礼簿。下载一个 HTML 文件即可使用，也可直接在线打开。
+
+            ### 核心能力
+
+            - 传统 12 列竖排礼单，记录姓名、礼金、关系、收款方式和备注
+            - 50 至 1000 元等常用金额快捷录入，常见关系一键选择
+            - 总金额、总人数、本页金额、本页人数实时汇总
+            - Excel 导入导出，方便备份、活动后整理及跨设备迁移
+            - A4 横向打印与 PDF 导出，含活动封面和完整分页礼单
+            - 喜事红色、庄重蓝白两套主题
+            - 主屏与副屏实时联动，适合投影和外接显示器展示
+
+            ### 使用方式
+
+            1. 下载下方 `libu.quickso.top.html` 附件。
+            2. 双击文件，用 Chrome、Edge 等现代浏览器打开。
+            3. 填写活动信息后即可开始记账；活动结束请导出 Excel 留存。
+
+            在线使用：<https://libu.quickso.top>
+
+            ### 数据说明
+
+            不设账号，不接收、不上传、不保存任何礼簿业务数据。所有录入内容仅存储在当前浏览器本地；线上页面与本地 HTML、不同浏览器或设备之间的数据互不共享，请通过 Excel 导入导出迁移和备份。
+
+            ---
+
+            本页仅提供当前版本说明与下载文件，不自动附带提交记录或 commit 链接。
           files: libu.quickso.top.html
