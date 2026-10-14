@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { ChevronLeft, ChevronRight, FileSpreadsheet, Pencil, Plus, Printer, Search, Trash2, Upload, WalletCards, X } from 'lucide-vue-next'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { ChevronLeft, ChevronRight, FileSpreadsheet, MonitorUp, Pencil, Plus, Printer, Search, Trash2, Upload, WalletCards, X } from 'lucide-vue-next'
+import DisplayScreen from './components/DisplayScreen.vue'
 import type { GiftDraft, GiftEvent, GiftRecord, PaymentMethod } from './types'
 import { addGift, createEvent, importGifts, listEvents, listGifts, softDeleteGift, updateGift } from './lib/db'
 import { buildExportName, exportEventWorkbook, readExcelGifts } from './lib/backup'
@@ -18,6 +19,11 @@ const currentPage = ref(1)
 const showEventForm = ref(false)
 const editingGift = ref<GiftRecord | null>(null)
 const excelInput = ref<HTMLInputElement | null>(null)
+const displayEventId = new URLSearchParams(window.location.search).get('display')
+const isDisplayMode = Boolean(displayEventId)
+const initialDisplayPage = Number(new URLSearchParams(window.location.search).get('page'))
+if (isDisplayMode && Number.isInteger(initialDisplayPage) && initialDisplayPage > 0) currentPage.value = initialDisplayPage
+let syncChannel: BroadcastChannel | undefined
 
 const eventForm = ref({ name: '', date: toDateInput(), recorder: '', theme: 'festive' as GiftEvent['theme'] })
 const giftForm = ref({ name: '', amount: '', method: 'cash' as PaymentMethod, relationship: '', note: '' })
@@ -35,6 +41,7 @@ const printPages = computed(() => {
   return pages.length ? pages : [[]]
 })
 const pageSubtotal = computed(() => pageGifts.value.reduce((sum, gift) => sum + gift.amountCents, 0))
+const totalAmount = computed(() => gifts.value.reduce((sum, gift) => sum + gift.amountCents, 0))
 const methodOptions = Object.entries(paymentLabels) as Array<[PaymentMethod, string]>
 const quickAmounts = ['50', '100', '200', '300', '500', '600', '800', '1000', '888', '666']
 const quickRelationships = ['朋友', '同学', '乡党', '亲戚', '同事', '战友', '师生', '领导', '客户', '亲家']
@@ -54,13 +61,29 @@ async function refresh() {
   loading.value = true
   try {
     events.value = await listEvents()
-    if (!selectedEventId.value || !events.value.some((event) => event.id === selectedEventId.value)) selectedEventId.value = events.value[0]?.id ?? ''
+    const displayEventExists = displayEventId && events.value.some((event) => event.id === displayEventId)
+    if (isDisplayMode && displayEventExists) selectedEventId.value = displayEventId
+    else if (!selectedEventId.value || !events.value.some((event) => event.id === selectedEventId.value)) selectedEventId.value = events.value[0]?.id ?? ''
     gifts.value = selectedEventId.value ? await listGifts(selectedEventId.value) : []
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '无法读取本地账本'
   } finally {
     loading.value = false
   }
+}
+
+function publishChange(eventId: string) {
+  syncChannel?.postMessage({ type: 'gifts-changed', eventId, page: currentPage.value })
+}
+
+function openDisplay() {
+  if (!selectedEvent.value) return
+  const displayUrl = new URL(window.location.href)
+  displayUrl.search = ''
+  displayUrl.searchParams.set('display', selectedEvent.value.id)
+  displayUrl.searchParams.set('page', String(currentPage.value))
+  const popup = window.open(displayUrl.toString(), 'gift-book-display', 'popup,width=1440,height=900')
+  if (!popup) error.value = '副屏窗口被浏览器拦截，请允许此网站打开弹窗后重试'
 }
 
 async function selectEvent(id: string) {
@@ -77,6 +100,7 @@ async function submitEvent() {
   selectedEventId.value = event.id
   await refresh()
   showNotice('礼簿已创建，数据已写入本地数据库')
+  publishChange(event.id)
 }
 
 function draftFromForm(): GiftDraft | null {
@@ -104,6 +128,7 @@ async function submitGift() {
     editingGift.value = null
     gifts.value = await listGifts(eventId)
     currentPage.value = isNewGift ? totalPages.value : Math.min(currentPage.value, totalPages.value)
+    publishChange(eventId)
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '保存失败'
   }
@@ -120,6 +145,7 @@ async function removeGift(gift: GiftRecord) {
   try {
     await softDeleteGift(gift.id, gift.revision)
     await selectEvent(gift.eventId)
+    publishChange(gift.eventId)
     showNotice('记录已撤销，可从审计备份中追溯')
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '撤销失败'
@@ -134,6 +160,7 @@ async function handleExcelImport(event: Event) {
     if (!window.confirm(`将向“${selectedEvent.value.name}”导入 ${imported.length} 条记录，是否继续？`)) return
     await importGifts(selectedEvent.value.id, imported)
     await selectEvent(selectedEvent.value.id)
+    publishChange(selectedEvent.value.id)
     showNotice(`已导入 ${imported.length} 条礼金记录`)
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '导入失败'
@@ -164,11 +191,36 @@ function printBook() {
   window.print()
 }
 
-onMounted(refresh)
+onMounted(() => {
+  if ('BroadcastChannel' in window) {
+    syncChannel = new BroadcastChannel('libu-gift-book-sync')
+    syncChannel.onmessage = (message: MessageEvent<{ type?: string; eventId?: string; page?: number }>) => {
+      if (isDisplayMode && message.data.type === 'gifts-changed' && message.data.eventId === selectedEventId.value) {
+        if (message.data.page && Number.isInteger(message.data.page)) currentPage.value = message.data.page
+        void refresh()
+      }
+    }
+  }
+  void refresh()
+})
+
+watch(currentPage, (page) => {
+  if (!isDisplayMode && selectedEventId.value) publishChange(selectedEventId.value)
+  if (isDisplayMode && page > totalPages.value) currentPage.value = totalPages.value
+})
+
+function changeDisplayPage(page: number) {
+  currentPage.value = page
+  if (selectedEventId.value) publishChange(selectedEventId.value)
+}
+
+onUnmounted(() => syncChannel?.close())
 </script>
 
 <template>
   <main class="giftbook-app" :class="selectedEvent?.theme === 'solemn' ? 'theme-solemn' : 'theme-festive'">
+    <DisplayScreen v-if="isDisplayMode" :event="selectedEvent" :gifts="gifts" :loading="loading" :page="currentPage" :page-count="totalPages" @change-page="changeDisplayPage" />
+    <template v-else>
     <section v-if="selectedEvent" class="giftbook-shell">
       <section class="print-cover">
         <h1>礼簿本</h1>
@@ -195,6 +247,7 @@ onMounted(refresh)
         </div>
         <div class="header-actions">
           <button class="button danger" type="button" @click="showEventForm = true"><Plus :size="15" />新建礼簿</button>
+          <button class="button outline" type="button" @click="openDisplay"><MonitorUp :size="15" />副屏展示</button>
           <button class="button primary" type="button" @click="printBook"><Printer :size="15" />打印/PDF</button>
           <button class="button outline" type="button" @click="excelInput?.click()"><Upload :size="15" />导入 Excel</button>
           <button class="button outline" type="button" @click="exportExcel"><FileSpreadsheet :size="15" />导出 Excel</button>
@@ -220,12 +273,11 @@ onMounted(refresh)
             <button class="button primary confirm-button" type="submit"><Pencil v-if="editingGift" :size="16" /><Plus v-else :size="16" />{{ editingGift ? '保存修改' : '确认录入' }}</button>
             <div v-if="editingGift" class="edit-actions"><button type="button" @click="editingGift = null; giftForm = { name: '', amount: '', method: 'cash', relationship: '', note: '' }">取消编辑</button><button class="remove" type="button" @click="removeGift(editingGift)"><Trash2 :size="14" />撤销记录</button></div>
           </form>
-          <div class="overall-stats"><span>总金额 <b>{{ formatCurrency(gifts.reduce((sum, gift) => sum + gift.amountCents, 0)) }}</b></span><span>总人数 <b>{{ gifts.length }}</b></span></div>
         </section>
 
         <section class="gift-book-frame no-print">
           <div class="filter-bar no-print"><label class="search"><Search :size="15" /><input v-model="query" placeholder="搜索姓名或备注..." /></label><select v-model="methodFilter"><option value="all">全部类型</option><option v-for="[value, label] in methodOptions" :key="value" :value="value">{{ label }}</option></select></div>
-          <div class="book-pagination no-print"><span>本页：{{ formatCurrency(pageSubtotal) }} <i /> 人数：{{ pageGifts.length }}</span><div><button type="button" title="上一页" :disabled="currentPage === 1" @click="currentPage--"><ChevronLeft :size="16" /></button><b>{{ currentPage }}/{{ totalPages }}</b><button type="button" title="下一页" :disabled="currentPage === totalPages" @click="currentPage++"><ChevronRight :size="16" /></button></div></div>
+          <div class="book-pagination no-print"><span>总金额：{{ formatCurrency(totalAmount) }} <i /> 总人数：{{ gifts.length }} <i /> 本页金额：{{ formatCurrency(pageSubtotal) }} <i /> 本页人数：{{ pageGifts.length }}</span><div><button type="button" title="上一页" :disabled="currentPage === 1" @click="currentPage--"><ChevronLeft :size="16" /></button><b>{{ currentPage }}/{{ totalPages }}</b><button type="button" title="下一页" :disabled="currentPage === totalPages" @click="currentPage++"><ChevronRight :size="16" /></button></div></div>
           <div class="gift-book-columns">
             <button v-for="index in 12" :key="index" class="gift-book-column" :class="{ populated: pageGifts[index - 1] }" type="button" :title="pageGifts[index - 1] ? '点击编辑记录' : '空白礼单'" @click="pageGifts[index - 1] && beginEdit(pageGifts[index - 1])">
               <span class="book-cell name-cell"><template v-if="pageGifts[index - 1]">{{ formatBookName(pageGifts[index - 1].name) }}</template><template v-else>+</template></span>
@@ -242,5 +294,6 @@ onMounted(refresh)
     <div v-if="showEventForm" class="modal-backdrop" @click.self="showEventForm = false">
       <form class="modal" @submit.prevent="submitEvent"><div class="modal-title"><div><p>新建礼簿</p><h2>活动信息</h2></div><button type="button" title="关闭" @click="showEventForm = false"><X :size="18" /></button></div><label><span>礼簿名称</span><input v-model="eventForm.name" required maxlength="60" autofocus placeholder="例如：张三、李四婚礼" /></label><div class="two-column"><label><span>活动日期</span><input v-model="eventForm.date" required type="date" /></label><label><span>记账人</span><input v-model="eventForm.recorder" maxlength="40" placeholder="选填" /></label></div><fieldset><legend>礼簿风格</legend><label class="radio"><input v-model="eventForm.theme" type="radio" value="festive" />喜事</label><label class="radio"><input v-model="eventForm.theme" type="radio" value="solemn" />庄重</label></fieldset><button class="button primary full" type="submit"><Plus :size="17" />创建礼簿</button></form>
     </div>
+    </template>
   </main>
 </template>
