@@ -72,8 +72,13 @@ async function refresh() {
   }
 }
 
-function publishChange(eventId: string) {
-  syncChannel?.postMessage({ type: 'gifts-changed', eventId, page: currentPage.value })
+function publishChange(eventId: string, page = currentPage.value) {
+  syncChannel?.postMessage({ type: 'gifts-changed', eventId, page })
+}
+
+async function refreshDisplay(page?: number) {
+  await refresh()
+  if (page && Number.isInteger(page)) currentPage.value = Math.min(page, totalPages.value)
 }
 
 function openDisplay() {
@@ -128,6 +133,7 @@ async function submitGift() {
     editingGift.value = null
     gifts.value = await listGifts(eventId)
     currentPage.value = isNewGift ? totalPages.value : Math.min(currentPage.value, totalPages.value)
+    await nextTick()
     publishChange(eventId)
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '保存失败'
@@ -195,9 +201,8 @@ onMounted(() => {
   if ('BroadcastChannel' in window) {
     syncChannel = new BroadcastChannel('libu-gift-book-sync')
     syncChannel.onmessage = (message: MessageEvent<{ type?: string; eventId?: string; page?: number }>) => {
-      if (isDisplayMode && message.data.type === 'gifts-changed' && message.data.eventId === selectedEventId.value) {
-        if (message.data.page && Number.isInteger(message.data.page)) currentPage.value = message.data.page
-        void refresh()
+      if (isDisplayMode && message.data.type === 'gifts-changed' && message.data.eventId === displayEventId) {
+        void refreshDisplay(message.data.page)
       }
     }
   }
@@ -218,7 +223,7 @@ onUnmounted(() => syncChannel?.close())
 </script>
 
 <template>
-  <main class="giftbook-app" :class="selectedEvent?.theme === 'solemn' ? 'theme-solemn' : 'theme-festive'">
+  <main class="giftbook-app" :class="[selectedEvent?.theme === 'solemn' ? 'theme-solemn' : 'theme-festive', { 'display-app': isDisplayMode }]">
     <DisplayScreen v-if="isDisplayMode" :event="selectedEvent" :gifts="gifts" :loading="loading" :page="currentPage" :page-count="totalPages" @change-page="changeDisplayPage" />
     <template v-else>
     <section v-if="selectedEvent" class="giftbook-shell">

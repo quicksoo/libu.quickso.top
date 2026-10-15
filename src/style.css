@@ -27,6 +27,8 @@ button { cursor: pointer; }
   background: linear-gradient(135deg, #fafafa, #f4f5f6);
 }
 
+.giftbook-app.display-app { height: 100dvh; min-height: 0; padding: 0; overflow: hidden; }
+
 .theme-solemn { --primary: #376d99; --primary-dark: #24557f; --light: #f1f7fb; --border: #c6dceb; --shadow: rgba(36, 85, 127, .13); --cover-ink: #24557f; --cover-pale: #f3f9fd; --book-surface: #dcebf6; --book-cell-border: #bed7e9; --book-separator: #b2d0e7; --book-hover: #f4faff; }
 .giftbook-shell { width: min(100%, 1100px); margin: 0 auto; }
 .book-header { background: #fff; border: 1px solid var(--border); box-shadow: 0 7px 22px var(--shadow); border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
