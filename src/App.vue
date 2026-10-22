@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { ChevronLeft, ChevronRight, FileSpreadsheet, MonitorUp, Pencil, Plus, Printer, Search, Trash2, Upload, WalletCards, X } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, FileSpreadsheet, House, MonitorUp, Pencil, Plus, Printer, Search, Trash2, Upload, WalletCards, X } from 'lucide-vue-next'
 import DisplayScreen from './components/DisplayScreen.vue'
 import type { GiftDraft, GiftEvent, GiftRecord, PaymentMethod } from './types'
 import { addGift, createEvent, importGifts, listEvents, listGifts, softDeleteGift, updateGift } from './lib/db'
@@ -251,6 +251,7 @@ onUnmounted(() => syncChannel?.close())
           </select>
         </div>
         <div class="header-actions">
+          <a class="button outline home-link" href="https://quickso.top/" target="_top"><House :size="15" />QuickSo 首页</a>
           <button class="button danger" type="button" @click="showEventForm = true"><Plus :size="15" />新建礼簿</button>
           <button class="button outline" type="button" @click="openDisplay"><MonitorUp :size="15" />副屏展示</button>
           <button class="button primary" type="button" @click="printBook"><Printer :size="15" />打印/PDF</button>
@@ -293,7 +294,7 @@ onUnmounted(() => syncChannel?.close())
       </div>
     </section>
 
-    <section v-else-if="!loading" class="welcome"><WalletCards :size="38" /><h2>电子礼簿</h2><p>创建一个礼簿，开始记录来宾礼金。</p><button class="button primary" type="button" @click="showEventForm = true"><Plus :size="17" />创建礼簿</button></section>
+    <section v-else-if="!loading" class="welcome"><WalletCards :size="38" /><h2>电子礼簿</h2><p>创建一个礼簿，开始记录来宾礼金。</p><div class="welcome-actions"><button class="button primary" type="button" @click="showEventForm = true"><Plus :size="17" />创建礼簿</button><a class="button outline home-link" href="https://quickso.top/" target="_top"><House :size="15" />QuickSo 首页</a></div></section>
     <div v-else class="loading">正在打开本地礼簿...</div>
 
     <div v-if="showEventForm" class="modal-backdrop" @click.self="showEventForm = false">

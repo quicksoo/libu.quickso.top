@@ -22,6 +22,8 @@ async function copyPublicAssets() {
   await mkdir(new URL('./dist/img/', import.meta.url), { recursive: true })
   await Promise.all([
     copyFile(new URL('./public/favicon.svg', import.meta.url), new URL('./dist/favicon.svg', import.meta.url)),
+    copyFile(new URL('./public/robots.txt', import.meta.url), new URL('./dist/robots.txt', import.meta.url)),
+    copyFile(new URL('./public/sitemap.xml', import.meta.url), new URL('./dist/sitemap.xml', import.meta.url)),
     copyFile(new URL('./img/gift-book-main-screen.png', import.meta.url), new URL('./dist/img/gift-book-main-screen.png', import.meta.url)),
     copyFile(new URL('./img/gift-book-display-screen.png', import.meta.url), new URL('./dist/img/gift-book-display-screen.png', import.meta.url)),
   ])

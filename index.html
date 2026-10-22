@@ -10,7 +10,7 @@
     <meta name="application-name" content="电子礼簿" />
     <meta name="theme-color" content="#d9534f" />
     <meta name="color-scheme" content="light" />
-    <meta name="category" content="工具,编程,开发" />
+    <meta name="category" content="生活工具,婚礼工具,礼金登记" />
     <link rel="canonical" href="https://libu.quickso.top/" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <meta property="og:title" content="电子礼簿" />
@@ -30,9 +30,18 @@
     <meta name="twitter:image" content="https://libu.quickso.top/img/gift-book-main-screen.png" />
     <meta name="twitter:image:alt" content="电子礼簿主界面，展示礼金录入与传统竖排礼单" />
     <title>电子礼簿 | 本地离线礼金登记</title>
+    <script>
+      if (new URLSearchParams(window.location.search).get('embed') === '1') {
+        document.querySelector('meta[name="robots"]').setAttribute('content', 'noindex,follow')
+      }
+    </script>
+    <script type="application/ld+json">
+      {"@context":"https://schema.org","@type":"WebApplication","name":"电子礼簿","url":"https://libu.quickso.top/","description":"离线优先的电子礼簿，用于礼金登记、统计以及 Excel 导入导出。","applicationCategory":"BusinessApplication","operatingSystem":"Web Browser","inLanguage":"zh-CN"}
+    </script>
   </head>
   <body>
     <div id="app"></div>
+    <noscript>电子礼簿是一款本地离线礼金登记工具。请启用 JavaScript 使用。</noscript>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
