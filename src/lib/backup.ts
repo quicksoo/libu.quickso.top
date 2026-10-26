@@ -2,6 +2,7 @@ import { z } from 'zod'
 import type { BackupPackage, GiftEvent, GiftRecord } from '../types'
 import { getFullBackupData, replaceAllData } from './db'
 import { formatCurrency, formatDateTime, paymentLabels } from './format'
+import { showFollowPrompt } from '../follow-prompt'
 
 const eventSchema = z.object({
   id: z.string().min(1), name: z.string().min(1), date: z.string().min(1), recorder: z.string(),
@@ -22,8 +23,14 @@ function download(blob: Blob, filename: string) {
   const link = document.createElement('a')
   link.href = url
   link.download = filename
-  link.click()
-  URL.revokeObjectURL(url)
+  document.body.append(link)
+  try {
+    link.click()
+  } finally {
+    link.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 60000)
+  }
+  showFollowPrompt()
 }
 
 async function sha256(value: string) {

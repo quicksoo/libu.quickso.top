@@ -6,6 +6,7 @@ import type { GiftDraft, GiftEvent, GiftRecord, PaymentMethod } from './types'
 import { addGift, createEvent, importGifts, listEvents, listGifts, softDeleteGift, updateGift } from './lib/db'
 import { buildExportName, exportEventWorkbook, readExcelGifts } from './lib/backup'
 import { amountToChinese, formatBookName, formatCurrency, parseYuan, paymentLabels, toDateInput } from './lib/format'
+import { showFollowPrompt } from './follow-prompt'
 
 const events = ref<GiftEvent[]>([])
 const gifts = ref<GiftRecord[]>([])
@@ -179,7 +180,7 @@ async function exportExcel() {
   if (!selectedEvent.value) return
   try {
     await exportEventWorkbook(selectedEvent.value, gifts.value)
-    showNotice('Excel 报表已导出')
+    showNotice('Excel 报表已生成，已发起下载')
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'Excel 导出失败'
   }
@@ -191,6 +192,7 @@ function printBook() {
   const restoreTitle = () => {
     document.title = previousTitle
     window.removeEventListener('afterprint', restoreTitle)
+    showFollowPrompt()
   }
   document.title = buildExportName(selectedEvent.value.name)
   window.addEventListener('afterprint', restoreTitle)
